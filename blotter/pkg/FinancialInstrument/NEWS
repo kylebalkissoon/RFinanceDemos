@@ -1,0 +1,80 @@
+Changes in Version 1.2
+======================
+USER VISIBLE CHANGES
+--------------------
+* saveInstruments() gains a "compress" argument to allow for different 
+  compression than the default ("gzip")
+
+BUG FIXES
+---------
+
+* setSymbolLookup.FI was appending the Symbol to the directory, and 
+  getSymbols.FI was only adding the Symbol to the file path if the end of the 
+  path was not the same as the Symbol.  That meant that getSymbols.FI could not
+  be used to get data for a Symbol that was the same as the base directory.
+  getSymbols.FI now always appends the Symbol to the file path and 
+  setSymbolLookup.FI does not append it to the base_dir. Test added.
+
+* In redenominate, if the object was a defined instrument, the currency in the
+  instrument object would be used even if the user passed a different currency
+  in the old_base argument.  
+
+* sort_ids() only worked in some locales when an instrument is not defined.  It 
+  now converts the month (returned by parse_id()) to numeric (with MC2N()) and 
+  uses the "%m" format in the as.Date call instead of using the month name with 
+  the (locale-specific) "%b" format.  Thanks to Alexis Petit for the patch.
+
+TESTS
+-----
+
+* Now using testthat for package testing
+
+
+Changes in Version 1.1
+======================
+
+NEW FEATURES
+------------
+
+* sort.instrument() method to sort the components of an instrument
+
+* CompareInstrumentFiles() allows passing it only 1 argument in which case it
+  will compare the currently loaded instrument environment against it.
+
+* If an instrument has a string like "2012-09", "2012/09", or "201209" in the
+  "expires" attribute, sort_id() will treat that instrument as expiring on the
+  first day of that month (2012-09-01).  Thanks to Jan Humme for reporting.
+
+BUG FIXES
+---------
+
+* import xts to prevent xts functions from being masked.
+
+* ls_instruments_by() checks for NA to avoid an error.
+
+* force evaluation of arguments to CompareInstrumentEnvironment()
+
+* option_series.yahoo() checks the results of the call to 
+  quantmod::getOptionChain() and only uses rows that contain the ticker Symbol
+  (sometimes in the off-hours, yahoo includes a bad row)
+
+* update_instruments.morningstar is slightly more robust.  It no longer 
+  depends on the relevant table being the 4th on the page; instead it uses
+  the table with the most rows.
+
+* Replace paste0() calls with paste() so that R 2.15 in not required.
+
+USER VISIBLE CHANGES
+--------------------
+
+* If use_identifier is not NA in a call to getSymbols.FI, and the instrument
+  cannot be found, there is a more informative error message.
+
+* minor updates to docs: typo fixes, updated seealso sections
+
+SANDBOX
+-------
+
+* The download.TrueFX.R script can now be called with Rscript. It accepts a 
+  trailing argument to specify the number of cores to use.
+
