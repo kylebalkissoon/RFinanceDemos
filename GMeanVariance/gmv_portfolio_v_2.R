@@ -40,14 +40,20 @@ colnames(P) = seltickers
 R = diff(log(P))
 R = R[-1,]
 
+#### Functions to use in backtest
 
+#taken from peterson's 2012 r/finance seminar
+pasd <- function(R, weights){
+  as.numeric(StdDev(R=R, weights=weights)*sqrt(12)) # hardcoded for monthly data
+  #    as.numeric(StdDev(R=R, weights=weights)*sqrt(4)) # hardcoded for quarterly data
+}
 
 ###### Calculate min variance portfolio
 
-GMVconst = constraint(assets=colnames(R),min=rep(0.001,ncol(R)),max=rep(0.05,ncol(R)),min_sum=1,max_sum=1,
+GMVconst = constraint(assets=colnames(R),min=rep(0.001,ncol(R)),max=rep(0.05,ncol(R)),min_sum=0.98,max_sum=1.02,
                       risk_aversion=1, 
-                      weight_seq = generatesequence(by=.001))
-GMVconst = add.objective(GMVconst,type="risk",name ="sd",enabled=TRUE,multiplier=0,risk_aversion=1)
+                      weight_seq=seq(.0001,.05,by=.0001))
+GMVconst = add.objective(GMVconst,type="risk",name ="pasd",enabled=TRUE,multiplier=0,risk_aversion=1)
 
 
 
