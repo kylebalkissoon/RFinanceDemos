@@ -30,9 +30,15 @@ P<- NULL
 seltickers<-NULL
 for(ticker in tickers){
   tmp = Cl(to.monthly(eval(parse(text=ticker))))
-  if(is.null(P)){timeP=time(tmp)}
-  if(any(time(tmp)!=timeP)) next
-  else P = cbind(P,as.numeric(tmp))
+  if(is.null(P)){
+      timeP=time(tmp)
+  }
+  if(any(time(tmp)!=timeP)) {
+      next
+  }
+  else {
+      P = cbind(P,as.numeric(tmp))
+  }
   seltickers = c(seltickers,ticker)
 }
 P = xts(P,order.by=timeP)
@@ -50,10 +56,23 @@ pasd <- function(R, weights){
 
 ###### Calculate min variance portfolio
 
-GMVconst = constraint(assets=colnames(R),min=rep(0.001,ncol(R)),max=rep(0.05,ncol(R)),min_sum=0.98,max_sum=1.02,
+GMVconst = constraint(assets=colnames(R),
+                      min=rep(0.001,
+                      ncol(R)),
+                      max=rep(0.05,ncol(R)),
+                      min_sum=0.98,
+                      max_sum=1.02,
                       risk_aversion=1, 
-                      weight_seq=seq(.0001,.05,by=.0001))
-GMVconst = add.objective(GMVconst,type="risk",name ="pasd",enabled=TRUE,multiplier=0,risk_aversion=1)
+                      weight_seq=seq(.0001,.05,by=.0001)
+            )
+
+GMVconst = add.objective(GMVconst,
+                         type="risk",
+                         name ="pasd",
+                         enabled=TRUE,
+                         multiplier=0,
+                         risk_aversion=1
+                         )
 
 # without rebalancing, for speed.
 GMVPortfolio <- optimize.portfolio(R, constraints=GMVconst,
