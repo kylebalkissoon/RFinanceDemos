@@ -55,9 +55,8 @@ GMVconst = constraint(assets=colnames(R),min=rep(0.001,ncol(R)),max=rep(0.05,nco
                       weight_seq=seq(.0001,.05,by=.0001))
 GMVconst = add.objective(GMVconst,type="risk",name ="pasd",enabled=TRUE,multiplier=0,risk_aversion=1)
 
-
-
-GMVPortfolio <- optimize.portfolio.rebalancing(R, constraints=GMVconst,
+# without rebalancing, for speed.
+GMVPortfolio <- optimize.portfolio(R, constraints=GMVconst,
                                                optimize_method="random", 
                                                trace=TRUE, 
                                                rebalance_on='months', 
@@ -66,3 +65,15 @@ GMVPortfolio <- optimize.portfolio.rebalancing(R, constraints=GMVconst,
                                                search_size=2000,
                                                verbose=FALSE,
                                                parallel=TRUE)
+
+#GMVPortfolio <- optimize.portfolio.rebalancing(R, constraints=GMVconst,
+ #                                              optimize_method="random", 
+ #                                              trace=TRUE, 
+ #                                              rebalance_on='months', 
+ #                                              trailing_periods=NULL, 
+ #                                              training_period=36,
+ #                                              search_size=2000,
+ #                                              verbose=FALSE,
+ #                                              parallel=TRUE)
+Return.rebalancing(R,extractWeights.rebal(GMVPortfolio)) # print results
+summary(GMVPortfolio)
