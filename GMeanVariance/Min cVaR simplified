@@ -1,0 +1,123 @@
+library(PortfolioAnalytics)
+library(PerformanceAnalytics)
+library(DEoptim)
+library(foreach)
+library(iterators)
+library(doParallel)
+library(quantmod)
+library(rugarch)
+cl <- makeCluster(8)
+registerDoParallel(cl)
+
+etflist = c("TLT","SPY","XLB","XLV","XLP","XLY","XLE","XLF","XLI","XLK","XLU")
+
+
+
+
+
+getSymbols(etflist,from="2003-12-01", to = "2013-05-01")
+
+tickers = etflist 
+## Make matrix of Returns code stolen from vignette of deoptim
+P<- NULL
+seltickers<-NULL
+for(ticker in tickers){
+  tmp = Cl(to.monthly(eval(parse(text=ticker))))
+  if(is.null(P)){timeP=time(tmp)}
+  if(any(time(tmp)!=timeP)) next
+  else P = cbind(P,as.numeric(tmp))
+  seltickers = c(seltickers,ticker)
+}
+P = xts(P,order.by=timeP)
+colnames(P) = seltickers
+R = diff(log(P))
+R = R[-1,]
+
+
+
+### Put functions used in portfolio Construction here
+
+testmean = function(n=6,R,weights){
+  ans = as.vector(colMeans(last(R,n)))*weights
+  return(ans)
+}
+
+
+##Return Matrix
+Retmat = R
+
+### Set Constraints
+
+rebalance_period = 'months' # uses endpoints identifiers from xts
+permutations = 4000
+clean = "boudt" #"none"
+
+
+# A set of box constraints used to initialize ALL the bouy portfolios
+init.constr <- constraint(assets = colnames(Retmat),
+                          min = .001, # minimum position weight
+                          max = .25, #1, # maximum position weight
+                          min_sum=0.99, # minimum sum of weights must be equal to 1-ish
+                          max_sum=1.01, # maximum sum must also be about 1
+                          weight_seq =seq(.001,.25,by=.001) )
+# Add measure 1, annualized return
+init.constr <- add.objective(constraints=init.constr,
+                             type="return", # the kind of objective this is
+                             name="testmean",
+                              enabled=TRUE, # enable or disable the objective
+                             multiplier=0, # calculate it but don't use it in the objective
+                             arguments = list(n=60) # for monthly
+                             # arguments = list(n=12) # for quarterly
+)
+# Add measure 2, annualized standard deviation
+init.constr <- add.objective(init.constr,
+                             type="risk", # the kind of objective this is
+                             name="pasd", # to minimize from the sample
+                             enabled=TRUE, # enable or disable the objective
+                             multiplier=0, # calculate it but don't use it in the objective
+                             arguments=list() # from inception for pasd 
+                             #arguments=list(sigmas=garch.sigmas) # from inception for pasd.garch 
+)
+
+# Add measure 3, CVaR with p=(1-1/12)
+
+# set confidence for VaR/ES
+p=1-1/12 # for monthly
+#p=.25 # for quarterly
+
+init.constr <- add.objective(init.constr,
+                             type="risk", # the kind of objective this is
+                             name="CVaR", # the function to minimize
+                             enabled=FALSE, # enable or disable the objective
+                             multiplier=0, # calculate it but don't use it in the objective
+                             arguments=list(p=p), 
+                             clean=clean
+)
+
+
+###### Calculate min variance portfolio
+rpc<- constraint(assets=ncol(Retmat),min=.001,max=.25,min_sum=.99,max_sum=1.01,weight_seq=seq(.001,.25,by=.001))
+rp<-random_portfolios(rpc,permutations=4000)
+#MinCVarPort
+
+mincvarport = init.constr
+mincvarport$objectives[[1]]$multiplier = 0
+mincvarport$objectives[[1]]$enabled = FALSE
+mincvarport$objectives[[2]]$multiplier = 0
+mincvarport$objectives[[2]]$enabled = FALSE
+mincvarport$objectives[[3]]$multiplier = 1
+mincvarport$objectives[[3]]$enabled = TRUE
+
+mincvarportfolio = optimize.portfolio.rebalancing(R= Retmat,
+                   constraints =mincvarport,
+                   optimize_method="DEoptim",
+                   search_size=permutations,
+                   rebalance_on=rebalance_period,
+                  trailing_periods=NULL,
+                  training_period=12,                   
+                   rp=rp,parallel=TRUE)
+
+Mincvarport.w = extractWeights.rebal(mincvarportfolio)
+MincvarportRet=Return.rebalancing(Retmat, Mincvarport.w)
+
+
