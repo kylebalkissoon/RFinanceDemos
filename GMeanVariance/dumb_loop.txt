@@ -83,5 +83,8 @@ optweights[i+1,] = weightvec$optim$bestmem
 
 
 }
-portret = rowSums(preturn)
-portret = xts(portret,order.by=index(preturn))
+optweights2 = optweights/rowSums(optweights)
+portreturn = optweights2*R
+portreturn = rowSums(portreturn)
+portreturn = xts(portreturn,order.by=index(R))
+colnames(portret) = "MinCVaR"
