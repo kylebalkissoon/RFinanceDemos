@@ -61,13 +61,27 @@ rp <-rp/rowSums(rp)
 controlDE = list(reltol=0.00001,steptol=150,itermax=2000,trace=250,NP=as.numeric(nrow(rp)),initialpop=rp)
 set.seed(1234)
 
-preturn = as.vector(1241)
+preturn = R
+for (p in 1:ncol(preturn)){
+	
+preturn[,p] = 0
+}
+optweights = R
+for (z in 1:ncol(optweights)){
+	
+optweights[,z] = 0
+}
+
 for (i in 2:length(R)){
 rollR = first(R,i)
 mu = colMeans(rollR)
 sigma = cov(rollR)
 
 weightvec = DEoptim(fn=objectivefun,lower=lower,upper=upper,control=controlDE)
-preturn[i] = weightvec$optim$bestmem*R[i+1]
+preturn[i+1,] = weightvec$optim$bestmem*R[i+1]
+optweights[i+1,] = weightvec$optim$bestmem
+
 
 }
+portret = rowSums(preturn)
+portret = xts(portret,order.by=index(preturn))
