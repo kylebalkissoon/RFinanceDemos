@@ -42,8 +42,8 @@ tmp2 = max(targ$pct_contrib_ES-0.05,0)
 out = tmp1 + 1e3 * tmp2
 return(out)}
 
-source("C:/R-Package/returnanalytics/pkg/PortfolioAnalytics/R/random_portfolios.R")
-source("C:/R-Package/returnanalytics/pkg/PortfolioAnalytics/R/constraints.R")
+source("random_portfolios.R")
+source("constraints.R")
 
 
 N = ncol(R)
