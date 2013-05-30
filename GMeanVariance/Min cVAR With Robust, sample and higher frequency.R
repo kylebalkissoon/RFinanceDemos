@@ -73,6 +73,30 @@ tmp2 = max(targ$pct_contrib_ES-0.05,0)
 out = tmp1 + 1e3 * tmp2
 return(out)}
 
+objectivefunsd = function(w){
+	if(sum(w)==0){
+		w = w + 1e-2 
+	}
+	w = w / sum(w)
+targ = StdDev(R=rollR,weights=w,portfolio_method="component",sigma=sigma)
+out = targ$StdDev
+
+return(out)}
+
+objectivefunsr = function(w){
+	if(sum(w)==0){
+		w = w + 1e-2 
+	}
+	w = w / sum(w)
+	target = SharpeRatio(R=rollR,weights=w,FUN="StdDev",Rf=0,p=0.95,annualize=FALSE)
+
+	
+rtarg = -target
+return(rtarg)
+	
+	
+}
+
 source("random_portfolios.R")
 source("constraints.R")
 
@@ -163,5 +187,51 @@ portreturn_rob = rowSums(portreturn_rob)
 portreturn_rob = xts(portreturn_rob,order.by=index(R))
 colnames(portreturn_rob) = "MinCVaR_Rob" 
 colofassets = merge.xts(colofassets,portreturn_rob)
+for (i in 2:length(R)){
+rollR = first(R,i)
+mu = colMeans(rollR)
+sigma = cov(rollR)
+weightvec = DEoptim(fn=objectivefunsd,lower=lower,upper=upper,control=controlDE)
+preturn[i+1,] = weightvec$optim$bestmem*R[i+1]
+optweights[i+1,] = weightvec$optim$bestmem
 
-chart.CumReturns(colofassets,wealth.index=TRUE,legend.loc="topleft")
+}
+optweights2 = optweights/rowSums(optweights)
+portreturn_minsd_cov = optweights2*R
+portreturn_minsd_cov = rowSums(portreturn_minsd_cov)
+portreturn_minsd_cov = xts(portreturn_minsd_cov,order.by=index(R))
+
+colnames(portreturn_minsd_cov) = "MinSD_cov"
+OOSweights_minsd_cov = weightvec$optim$bestmem/sum(weightvec$optim$bestmem)
+
+blob=merge.xts(portreturn_minsd_cov,R2)
+#save(optweights2,file="C:/Users/Kyle/Documents/ESG Mining/optweightsminSD.rda")
+#load(file="C:/Users/Kyle/Documents/ESG Mining/optweightsminSD.rda")
+
+
+
+
+###Max Sharpe
+for (i in 2:length(R)){
+rollR = first(R,i)
+mu = colMeans(rollR)
+sigma = cov(rollR)
+weightvec = DEoptim(fn=objectivefunsr,lower=lower,upper=upper,control=controlDE)
+preturn[i+1,] = weightvec$optim$bestmem*R[i+1]
+optweights[i+1,] = weightvec$optim$bestmem
+
+}
+portreturn_maxsr_cov = optweights2*R
+portreturn_maxsr_cov = rowSums(portreturn_maxsr_cov)
+portreturn_maxsr_cov = xts(portreturn_maxsr_cov,order.by=index(R))
+
+
+
+colnames(portreturn_maxsr_cov) = "MaxSR_cov"
+OOSweights_maxsr_cov = weightvec$optim$bestmem/sum(weightvec$optim$bestmem)
+
+colofassets = merge.xts(portreturn_minsd_cov,R2,portreturn_rob,portreturn_covd,portreturn_maxsr_cov)
+colofassets2 = colofassets['2007-12-31/2013-05-01']
+chart.CumReturns(colofassets2,wealth.index=TRUE,legend.loc="topleft")
+
+
