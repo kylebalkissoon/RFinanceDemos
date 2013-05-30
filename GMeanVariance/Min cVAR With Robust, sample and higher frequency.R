@@ -3,18 +3,27 @@
 #' ES(mu=colMeans(edhec),sigma=cov(edhec),m3=PerformanceAnalytics:::M3.MM(edhec),m4=PerformanceAnalytics:::M4.MM(edhec), weights=rep(1/ncol(edhec),ncol(edhec)))
 #' 
 
+# debugging
+options(warn=2)
+options(error=dump.frames)
+
 library(PerformanceAnalytics)
 library(DEoptim)
 library(quantmod)
 library(robust)
 library(doParallel)
+
+# make a Cluster of 8 processors to run the optimization in parallel
+
 cl <- makeCluster(8)
 registerDoParallel(cl)
 
+#
 etflist = c("TLT","SPY","XLB","XLV","XLP","XLY","XLE","XLF","XLI","XLK","XLU")
 getSymbols(etflist,from="2003-12-01", to = "2013-05-01")
 benchlist = "SPY"
 tickers = etflist 
+
 ## Make matrix of Returns code stolen from vignette of deoptim
 P<- NULL
 seltickers<-NULL
