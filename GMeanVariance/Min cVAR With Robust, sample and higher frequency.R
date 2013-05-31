@@ -34,10 +34,16 @@ for(ticker in tickers){
   else P = cbind(P,as.numeric(tmp))
   seltickers = c(seltickers,ticker)
 }
+
 P = xts(P,order.by=timeP)
 colnames(P) = seltickers
 R = diff(log(P))
 R = R[-1,]
+
+chart.CumReturns(R, legend.loc="topleft", 
+                 main="Cumulative Monthly Returns",
+                 colorset=rich10equal )
+chart.Boxplot(R)
 
 ## Make Matrix of daily returns
 Pday<- NULL
@@ -69,18 +75,18 @@ colnames(P2) = seltickers
 R2 = diff(log(P2))
 R2 = R2[-1,]
 
-
 initw = rep(1/ncol(R),ncol(R))
 objectivefun = function(w){
   if(sum(w)==0){
 		w = w + 1e-2 
 	}
 	w = w / sum(w)
-targ = ES(weights=w,method="gaussian",portfolio_method="component",mu=mu,sigma=sigma)
-tmp1 = targ$ES
-tmp2 = max(targ$pct_contrib_ES-0.05,0)
-out = tmp1 + 1e3 * tmp2
-return(out)}
+  targ = ES(weights=w,method="gaussian",portfolio_method="component",mu=mu,sigma=sigma)
+  tmp1 = targ$ES
+  tmp2 = max(targ$pct_contrib_ES-0.05,0)
+  out = tmp1 + 1e3 * tmp2
+  return(out)
+}
 
 source("random_portfolios.R")
 source("constraints.R")
@@ -93,7 +99,9 @@ lower = rep(minw,N)
 upper = rep(maxw,N)
 
 eps <- 0.025
-weight_seq<-generatesequence(min=minw,max=maxw,by=.001,rounding=3)
+# the weights are in tenths for testing
+# set by to .001 for more precision
+weight_seq<-generatesequence(min=minw,max=maxw,by=.1,rounding=3)
 rpconstraint<-constraint( assets=N, min_sum=1-eps, max_sum=1+eps, min=lower, max=upper, weight_seq=weight_seq)
 
 rp = random_portfolios(rpconstraints=rpconstraint,permutations=N*10)
@@ -106,6 +114,16 @@ for (p in 1:ncol(preturn)){
 	preturn[,p] = 0
 }
 optweights = R
+cnames <- colnames(preturn)
+zeros <- c(0)
+for ( i in 2:ncol(optweights)){
+  zeros <- cbind(zeros, 0) 
+  }
+colnames(zeros) <- cnames
+nextdate <- tail(time(optweights)+1/frequency(optweights), n=1)
+newrow <- as.xts(zeros, order.by=c(nextdate))
+optweights=rbind(R, newrow)
+
 for (z in 1:ncol(optweights)){
 	optweights[,z] = 0
 }
