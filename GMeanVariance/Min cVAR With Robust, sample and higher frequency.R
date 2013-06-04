@@ -4,8 +4,8 @@
 #' 
 
 # debugging
-options(warn=2)
-options(error=dump.frames)
+#options(warn=2)
+#options(error=dump.frames)
 
 library(PerformanceAnalytics)
 library(DEoptim)
@@ -40,6 +40,9 @@ P <- xts(P,order.by=timeP)
 colnames(P) <- seltickers
 R <- diff(log(P))
 R <- R[-1,]
+numperiods = nrow(P)
+numreturns = nrow(R)
+numinstruments = ncol(P)
 
 chart.CumReturns(R, legend.loc="topleft", 
                  main="Cumulative Monthly Returns",
@@ -111,7 +114,8 @@ source("random_portfolios.R")
 source("constraints.R")
 
 
-N <- ncol(R)
+#N <- ncol(R)
+N <- numinstruments
 minw <- 0
 maxw <- 1
 lower <- rep(minw,N)
@@ -132,37 +136,44 @@ controlDE <- list(reltol=0.00001, steptol=150, itermax=2000,
 set.seed(1234)
 
 preturn <- R
-for (p in 1:ncol(preturn)){
+#for (p in 1:ncol(preturn)){
+for (p in 1:numinstruments){
 	preturn[,p] <- 0
 }
 optweights <- R
 cnames <- colnames(preturn)
 zeros <- c(0)
-for ( i in 2:ncol(optweights)){
+#for ( i in 2:ncol(optweights)){
+for ( i in 2:numinstruments){
+  
   zeros <- cbind(zeros, 0) 
-  }
+  } # add a zero row for the current month to preturn
 colnames(zeros) <- cnames
 nextdate <- tail(time(optweights)+1/frequency(optweights), n=1)
 newrow <- as.xts(zeros, order.by=c(nextdate))
-optweights <- rbind(R, newrow)
+optweights <- rbind(R, newrow) # add a next period 0 row
+preturn <- rbind(preturn, newrow)
 
-for (z in 1:ncol(optweights)){
+#for (z in 1:ncol(optweights)){
+for (z in 1:numinstruments){
 	optweights[,z] <- 0
 }
-optweights
+#optweights
 ##Sample Cov Monthly
-for (i in 2:length(R)){
+#for (i in 2:length(R)){
+for (i in 2:numreturns){
   rollR = first(R,i)
   mu = colMeans(rollR)
   sigma = cov(rollR)
   weightvec = DEoptim(fn=objectivefun, lower=lower, upper=upper,
                        control=controlDE)
-  print(i)
-  #print(R[i+1])
-  preturn[i+1,] = weightvec$optim$bestmem*R[i+1]
-  #print(i)
-  #print(R[i+1])
-  optweights[i+1,] = weightvec$optim$bestmem
+  # weightvec$optim$bestmem is a list 
+  #preturn[i+1,] = weightvec$optim$bestmem*R[i+1]
+  print(preturn)
+  preturn[i+1,] = weightvec$optim$bestmem*R[i]
+  print(preturn)
+  #optweights[i+1,] = weightvec$optim$bestmem
+  optweights[i,] = weightvec$optim$bestmem
 }
 optweights2 <- optweights/rowSums(optweights)
 portreturn_cov <- optweights2*R
@@ -175,8 +186,8 @@ OOSweights_cov <- weightvec$optim$bestmem/sum(weightvec$optim$bestmem)
 twoassets <- merge.xts(portreturn_cov,R2)
 
 ##Sample COV Daily
-
-for (i in 2:length(R)){
+#for (i in 2:length(R)){
+for (i in 2:numreturns){
   rollR <- first(R,i)
   mu <- colMeans(rollR)
   rend <- endpoints(Rday)
@@ -185,7 +196,11 @@ for (i in 2:length(R)){
   sigma <- sigma*sqrt(23)
   weightvec <- DEoptim(fn=objectivefun, lower=lower,
                        upper=upper, control=controlDE)
-  preturn[i+1,] <- weightvec$optim$bestmem*R[i+1]
+  print(preturn)
+  print(" before assign")
+  preturn[i+1,] <- weightvec$optim$bestmem*R[i]
+  print(" after assign")
+  print(preturn)
   optweights[i+1,] <- weightvec$optim$bestmem
 }
 optweights2 <- optweights/rowSums(optweights)
@@ -199,7 +214,8 @@ OOSweights_cov_d <- weightvec$optim$bestmem/sum(weightvec$optim$bestmem)
 colofassets <- merge.xts(portreturn_covd, portreturn_cov, R2)
 
 ###ROBUST COVARIANCE 
-for (i in 12:length(R)){
+#for (i in 12:length(R)){
+for (i in 2:numreturns){
   rollR <- first(R,i)
   mu <- colMeans(rollR)
 #rend = endpoints(Rday)
@@ -209,7 +225,7 @@ for (i in 12:length(R)){
 #sigma = sigma*sqrt(23)
   weightvec <- DEoptim(fn=objectivefun, lower=lower,
                        upper=upper, control=controlDE)  
-  preturn[i+1,] <- weightvec$optim$bestmem*R[i+1]
+  preturn[i+1,] <- weightvec$optim$bestmem*R[i]
   optweights[i+1,] <- weightvec$optim$bestmem
 }
 
@@ -220,13 +236,14 @@ portreturn_rob <- xts(portreturn_rob,order.by=index(R))
 colnames(portreturn_rob) <- "MinCVaR_Rob" 
 colofassets <- merge.xts(colofassets,portreturn_rob)
 
-for ( i in 2:length(R)){
+#for ( i in 2:length(R)){
+for ( i in 2:numreturns){
   rollR <- first(R, i)
   mu <- colMeans(rollR)
   sigma <- cov(rollR)
   weightvec <- DEoptim(fn=objectivefunsd, lower=lower,
                        upper=upper, control=controlDE)
-  preturn[i+1,] <- weightvec$optim$bestmem*R[i+1]
+  preturn[i+1,] <- weightvec$optim$bestmem*R[i]
   optweights[i+1,] <- weightvec$optim$bestmem
 }
 
@@ -241,13 +258,14 @@ OOSweights_minsd_cov <- weightvec$optim$bestmem/sum(weightvec$optim$bestmem)
 blob=merge.xts(portreturn_minsd_cov,R2)
 
 ### Max Sharpe
-for (i in 2:length(R)){
+#for (i in 2:length(R)){ 
+for (i in 2:numreturns){ 
   rollR <- first(R, i)
   mu <- colMeans(rollR)
   sigma <- cov(rollR)
   weightvec <- DEoptim(fn=objectivefunsr, lower=lower,
                        upper=upper, control=controlDE)
-  preturn[i+1,] <- weightvec$optim$bestmem*R[i+1]
+  preturn[i+1,] <- weightvec$optim$bestmem*R[i]
   optweights[i+1,] <- weightvec$optim$bestmem
 }
 portreturn_maxsr_cov <- optweights2*R
