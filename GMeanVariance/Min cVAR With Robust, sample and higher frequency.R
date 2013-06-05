@@ -1,6 +1,13 @@
 #' Conditional Value At Risk portfolio allocation example
 #' 
-#' ES(mu=colMeans(edhec),sigma=cov(edhec),m3=PerformanceAnalytics:::M3.MM(edhec),m4=PerformanceAnalytics:::M4.MM(edhec), weights=rep(1/ncol(edhec),ncol(edhec)))
+#'
+#' This is a demonstration of using DEOptim, a package for Differential Evolution Optimization,
+#' to optimize the wights of a group of ETFs to satisfy several different criteria 
+#' (Minimize Robust conditional Value at Risk cVaR [MinCVaR_Rob], minimize conditional VaR covariance 
+#' on daily returns[ MinCVaR_cov_daily], minimize Standard Deviation covariance [MinSD_cov], and 
+#' Maximize Sharpe Ratio covariance [MaxSR_cov])
+#' 
+#' Inputs: A list of ETF symbols, and the benchmark Symbol
 #' 
 
 # debugging
@@ -20,8 +27,7 @@ registerDoParallel(cl)
 
 #
 etflist <- c("TLT","SPY","XLB","XLV","XLP","XLY","XLE","XLF","XLI","XLK","XLU")
-#getSymbols(etflist,from="2003-12-01", to = "2013-05-01")
-getSymbols(etflist,from="2012-12-01", to = "2013-05-01")
+getSymbols(etflist,from="2003-12-01", to = "2013-05-01")
 benchlist <- "SPY"
 tickers <- etflist 
 
@@ -136,14 +142,14 @@ controlDE <- list(reltol=0.00001, steptol=150, itermax=2000,
 set.seed(1234)
 
 preturn <- R
-#for (p in 1:ncol(preturn)){
+
 for (p in 1:numinstruments){
 	preturn[,p] <- 0
 }
 optweights <- R
 cnames <- colnames(preturn)
 zeros <- c(0)
-#for ( i in 2:ncol(optweights)){
+
 for ( i in 2:numinstruments){
   
   zeros <- cbind(zeros, 0) 
@@ -154,13 +160,12 @@ newrow <- as.xts(zeros, order.by=c(nextdate))
 optweights <- rbind(R, newrow) # add a next period 0 row
 preturn <- rbind(preturn, newrow)
 
-#for (z in 1:ncol(optweights)){
 for (z in 1:numinstruments){
 	optweights[,z] <- 0
 }
-#optweights
+
 ##Sample Cov Monthly
-#for (i in 2:length(R)){
+#
 for (i in 2:numreturns){
   rollR = first(R,i)
   mu = colMeans(rollR)
@@ -168,11 +173,7 @@ for (i in 2:numreturns){
   weightvec = DEoptim(fn=objectivefun, lower=lower, upper=upper,
                        control=controlDE)
   # weightvec$optim$bestmem is a list 
-  #preturn[i+1,] = weightvec$optim$bestmem*R[i+1]
-  print(preturn)
   preturn[i+1,] = weightvec$optim$bestmem*R[i]
-  print(preturn)
-  #optweights[i+1,] = weightvec$optim$bestmem
   optweights[i,] = weightvec$optim$bestmem
 }
 optweights2 <- optweights/rowSums(optweights)
@@ -186,7 +187,6 @@ OOSweights_cov <- weightvec$optim$bestmem/sum(weightvec$optim$bestmem)
 twoassets <- merge.xts(portreturn_cov,R2)
 
 ##Sample COV Daily
-#for (i in 2:length(R)){
 for (i in 2:numreturns){
   rollR <- first(R,i)
   mu <- colMeans(rollR)
@@ -196,11 +196,7 @@ for (i in 2:numreturns){
   sigma <- sigma*sqrt(23)
   weightvec <- DEoptim(fn=objectivefun, lower=lower,
                        upper=upper, control=controlDE)
-  print(preturn)
-  print(" before assign")
   preturn[i+1,] <- weightvec$optim$bestmem*R[i]
-  print(" after assign")
-  print(preturn)
   optweights[i+1,] <- weightvec$optim$bestmem
 }
 optweights2 <- optweights/rowSums(optweights)
@@ -214,7 +210,6 @@ OOSweights_cov_d <- weightvec$optim$bestmem/sum(weightvec$optim$bestmem)
 colofassets <- merge.xts(portreturn_covd, portreturn_cov, R2)
 
 ###ROBUST COVARIANCE 
-#for (i in 12:length(R)){
 for (i in 2:numreturns){
   rollR <- first(R,i)
   mu <- colMeans(rollR)
@@ -236,7 +231,6 @@ portreturn_rob <- xts(portreturn_rob,order.by=index(R))
 colnames(portreturn_rob) <- "MinCVaR_Rob" 
 colofassets <- merge.xts(colofassets,portreturn_rob)
 
-#for ( i in 2:length(R)){
 for ( i in 2:numreturns){
   rollR <- first(R, i)
   mu <- colMeans(rollR)
@@ -258,7 +252,7 @@ OOSweights_minsd_cov <- weightvec$optim$bestmem/sum(weightvec$optim$bestmem)
 blob=merge.xts(portreturn_minsd_cov,R2)
 
 ### Max Sharpe
-#for (i in 2:length(R)){ 
+
 for (i in 2:numreturns){ 
   rollR <- first(R, i)
   mu <- colMeans(rollR)
