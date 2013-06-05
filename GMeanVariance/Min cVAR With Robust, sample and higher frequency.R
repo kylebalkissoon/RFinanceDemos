@@ -118,16 +118,20 @@ objectivefunsd <- function(w){
   out <- targ$StdDev
   return(out)
 }
-objectivefunsr <- function(w){
-  if(sum(w)==0){
-    w <- w + 1e-2 
-  }
-  w <- w / sum(w)
-  targ <- SharpeRatio(R=rollR, weights=w, FUN='StdDev', Rf=0, p=0.95, annualize=FALSE)
-  rtarg <- -targ
-  return(rtarg)
-}
+objectivefunsr = function(w){
+	if(sum(w)==0){
+		w = w + 1e-2 
+	}
+	w = w / sum(w)
 
+	target = (t(w)%*%mu) /(t(w)%*%sigma%*%w)
+
+	
+rtarg = -target
+return(rtarg)
+	
+	
+}
 source("random_portfolios.R")
 source("constraints.R")
 
