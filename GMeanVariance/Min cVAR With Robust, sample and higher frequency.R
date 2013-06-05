@@ -44,8 +44,14 @@ for(ticker in tickers){
 
 P <- xts(P,order.by=timeP)
 colnames(P) <- seltickers
+#
+# TODO: use simple returns, not log
+#
 R <- diff(log(P))
 R <- R[-1,]
+returnsDiscrete <- CalculateReturns(P, method='discrete')
+returnsLog <- CalculateReturns(P, method='log')
+
 numperiods = nrow(P)
 numreturns = nrow(R)
 numinstruments = ncol(P)
@@ -67,6 +73,9 @@ for(ticker in tickers){
 }
 Pday <- xts(Pday,order.by=timeP)
 colnames(Pday) <- seltickers
+#
+# TODO: use simple returns, not log
+#
 Rday <- diff(log(Pday))
 Rday <- Rday[-1,]
 
@@ -82,6 +91,9 @@ for(ticker in benchlist){
 }
 P2 <- xts(P2,order.by=timeP)
 colnames(P2) <- seltickers
+#
+# TODO: use simple returns, not log
+#
 R2 <- diff(log(P2))
 R2 <- R2[-1,]
 
@@ -269,10 +281,11 @@ portreturn_maxsr_cov <- xts(portreturn_maxsr_cov, order.by=index(R))
 colnames(portreturn_maxsr_cov) <- "MaxSR_cov"
 OOSweights_maxsr_cov <- weightvec$optim$bestmem/sum(weightvec$optim$bestmem)
 
-colofassets <- merge.xts(portreturn_minsd_cov, R2, 
+colofassets <- merge.xts(portreturn_minsd_cov, 
+                         R2, 
                          portreturn_rob, 
                          portreturn_covd, 
                          portreturn_maxsr_cov)
-colofassets2 <- colofassets['2007-12-31/2013-05-01']
+#colofassets2 <- colofassets['2007-12-31/2013-05-01']
 
 chart.CumReturns(colofassets, wealth.index=TRUE, legend.loc="topleft")
